@@ -5,7 +5,6 @@ from sensor_msgs.msg import Image
 from message_filters import ApproximateTimeSynchronizer, Subscriber
 from darknet_ros_msgs.msg import BoundingBoxes
 from sara_msgs.msg import BoundingBoxes3D, BoundingBox3D
-from geometry_msgs.msg import Point
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
@@ -24,14 +23,44 @@ def synchronisedCallback(depth, bounding_boxes):
 
     depth_array = np.array(depth_image, dtype=np.float32)
 
+    boxes3D=BoundingBoxes3D()
+    boxes3D.header = bounding_boxes.image_header
+
     for box in bounding_boxes.bounding_boxes:
         # Get the distance in (m)
         distance_median = np.median(depth_array[box.xmin:box.xmax, box.ymin:box.ymax])/1000
         debug+="\n    distance_median: "+str(distance_median)+"(m)"
 
+        # Create the 3D box
+        box3D = BoundingBox3D()
+        box3D.class = box.Class
+        box3D.probability = box.probability
+        box3D.pose.position.z =
+
+
+
+        # Get 2d center
+        x = (box.xmax + box.xmin)/2
+        y = (box.ymax + box.ymin)/2
+
+        # Get pixel to rad ratio
+        xratio = camera_fov_width/depth.shape(1)
+        yratio = camera_fov_height/depth.shape(0)
+
+        # Get the IRL angles from the camera center to the object
+        ax = -(x - depth.shape(1)/2)*xratio
+        ay = -(y - depth.shape(0)/2)*yratio
+        aw = -(box.xmax - depth.shape(1)/2)*xratio
+        ah = -(box.ymax - depth.shape(0)/2)*yratio
+
+        
+
+
+
+
+
     rospy.logdebug(debug)
 
-    pose =
 
 def wm_darknet_ros_3d_wrapper_node():
     rospy.init_node('darknet_ros_3d_wrapper_node')
@@ -41,6 +70,8 @@ def wm_darknet_ros_3d_wrapper_node():
     bounding_boxes_topic = rospy.get_param("bounding_boxes_topic", "/darknet_ros/bounding_boxes")
     synchroniser_buffer = rospy.get_param("synchroniser_buffer", 50)
     synchroniser_time_tolerance = rospy.get_param("synchroniser_time_tolerance", 0.5)
+    camera_fov_width = rospy.get_param("camera_fov_width", 1.012290966)
+    camera_fov_height = rospy.get_param("camera_fov_height", 0.785398163397)
 
     rospy.loginfo("wm_darknet_ros_3d_wrapper_node settings:\n    depth_topic: "+str(depth_topic)
     +"\n    bounding_boxes_topic: "+str(bounding_boxes_topic)
