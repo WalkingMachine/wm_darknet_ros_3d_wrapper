@@ -8,10 +8,30 @@ from sara_msgs.msg import BoundingBoxes3D, BoundingBox3D
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
+from tf.transformations import quaternion_from_euler
+import math
 
 bridge = CvBridge()
 
+depth_topic = ""
+bounding_boxes_topic = ""
+synchroniser_buffer = ""
+synchroniser_time_tolerance = ""
+camera_fov_width = ""
+camera_fov_height = ""
+
+
+
 def synchronisedCallback(depth, bounding_boxes):
+
+    global depth_topic
+    global bounding_boxes_topic
+    global synchroniser_buffer
+    global synchroniser_time_tolerance
+    global camera_fov_width
+    global camera_fov_height
+
+
 
     debug="I heard something"
     debug+="\n    image stamp: "+str(depth.header.stamp)
@@ -33,37 +53,52 @@ def synchronisedCallback(depth, bounding_boxes):
 
         # Create the 3D box
         box3D = BoundingBox3D()
-        box3D.class = box.Class
+        box3D.className = box.Class
         box3D.probability = box.probability
-        box3D.pose.position.z =
-
-
+        box3D.pose.orientation = quaternion_from_euler(0, 0, 0)
 
         # Get 2d center
         x = (box.xmax + box.xmin)/2
         y = (box.ymax + box.ymin)/2
 
         # Get pixel to rad ratio
-        xratio = camera_fov_width/depth.shape(1)
-        yratio = camera_fov_height/depth.shape(0)
+        xratio = camera_fov_width/depth_array.shape[1]
+        yratio = camera_fov_height/depth_array.shape[0]
 
         # Get the IRL angles from the camera center to the object
-        ax = -(x - depth.shape(1)/2)*xratio
-        ay = -(y - depth.shape(0)/2)*yratio
-        aw = -(box.xmax - depth.shape(1)/2)*xratio
-        ah = -(box.ymax - depth.shape(0)/2)*yratio
+        ax = -(x - depth_array.shape[1]/2)*xratio
+        ay = -(y - depth_array.shape[0]/2)*yratio
+        aw = -(box.xmax - depth_array.shape[1]/2)*xratio
+        ah = -(box.ymax - depth_array.shape[0]/2)*yratio
 
-        
+        # Convert the angeles and distance to x y z coordinates
+        px = -distance_median * math.sin(ax)
+        py = -distance_median * math.sin(ay)
+        pz = distance_median * math.cos(ax)*math.cos(ay)
+        pxwh = -distance_median * math.sin(aw)
+        pywh = -distance_median * math.sin(ah)
+        pzwh = distance_median * math.cos(aw)*math.cos(ah)
 
+        # Place the coordinates into the pose.
+        box3D.pose.position.x = px
+        box3D.pose.position.y = py
+        box3D.pose.position.z = pz
 
-
-
+        print(str(box3D))
 
     rospy.logdebug(debug)
 
 
 def wm_darknet_ros_3d_wrapper_node():
     rospy.init_node('darknet_ros_3d_wrapper_node')
+
+    global depth_topic
+    global bounding_boxes_topic
+    global synchroniser_buffer
+    global synchroniser_time_tolerance
+    global camera_fov_width
+    global camera_fov_height
+
 
     # Get parameters
     depth_topic = rospy.get_param("depth_topic", "/camera/depth/image_raw")
