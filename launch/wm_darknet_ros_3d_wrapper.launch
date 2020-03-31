@@ -1,0 +1,6 @@
+<launch>
+
+    <node pkg="wm_darknet_ros_3d_wrapper" type="bounding_box_stamp_corrector.py" name="bounding_box_stamp_corrector"/>
+    <node pkg="wm_darknet_ros_3d_wrapper" type="wm_darknet_ros_3d_wrapper_node.py" name="wm_darknet_ros_3d_wrapper_node" output="screen"/>
+
+</launch>
