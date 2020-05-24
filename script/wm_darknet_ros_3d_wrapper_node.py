@@ -12,6 +12,9 @@ from tf.transformations import quaternion_from_euler
 import math
 from visualization_msgs.msg import MarkerArray, Marker
 from matplotlib import pyplot as plt
+from scipy import stats
+import sys
+from  scipy import ndimage
 
 bridge = CvBridge()
 
@@ -23,6 +26,61 @@ camera_fov_width = ""
 camera_fov_height = ""
 markerPublisher = ""
 boxPublisher = ""
+histogramPrecision = 15.0 # (bins/m) 15 bins result in 6.7cm per bins
+display_gui = False
+
+
+# Get the distance in (m) and coordinates in pixel. Using Median.
+def getDistanceMedian(depth_array, box):
+    distance_median = np.median(depth_array[box.ymin+5:box.ymax-5, box.xmin+5:box.xmax-5])#/1000 # (m)
+    x = (box.ymin+box.ymax)/2
+    y = (box.xmin+box.xmax)/2
+    return distance_median, x, y
+
+# Get the distance in (m) and coordinates in pixel. Using Median.
+def getDistanceAvg(depth_array, box):
+    distance_avg = np.mean(depth_array[box.ymin+5:box.ymax-5, box.xmin+5:box.xmax-5])#/1000 # (m)
+    x = (box.ymin+box.ymax)/2
+    y = (box.xmin+box.xmax)/2
+    return distance_avg, x, y
+
+# Get the distance in (m) and coordinates in pixel. Using Median.
+def getDistanceMode(depth_array, box):
+    global histogramPrecision
+    global display_gui
+
+    width = box.ymax-box.ymin
+    height = box.xmax-box.xmin
+
+    mask = depth_array[box.ymin:box.ymax, box.xmin:box.xmax]
+    mask[np.isnan(mask)] = 0
+    # plt.imshow(depth_array),plt.colorbar(),plt.show()
+    # plt.imshow(mask),plt.colorbar(),plt.show()
+
+    data = mask.ravel()
+    try:
+        bincount = np.bincount((data*histogramPrecision).astype(int))
+    except:
+        # np.set_printoptions(threshold=sys.maxsize)
+        print("errored data")
+        print(data)
+
+    bincount[0]=0
+
+    distance_mode = bincount.argmax()/histogramPrecision
+
+    mask[mask > distance_mode+2/histogramPrecision] = 0
+    mask[mask < distance_mode-2/histogramPrecision] = 0
+
+    center_of_mass = ndimage.measurements.center_of_mass(mask)
+    y, x = center_of_mass
+    x += box.xmin
+    y += box.ymin
+
+    distance = np.mean(data[((data < distance_mode+1/histogramPrecision)
+    & (data > distance_mode-1/histogramPrecision))])
+
+    return distance, x, y
 
 
 def synchronisedCallback(depth, bounding_boxes):
@@ -50,32 +108,27 @@ def synchronisedCallback(depth, bounding_boxes):
     boxes3D.header = bounding_boxes.header
     markers=MarkerArray()
 
+    X = []
+    Y = []
+    D = []
+
+
+    if display_gui:
+        plt.imshow(depth_array)
+        plt.colorbar()
+
     i = 0
     for box in bounding_boxes.bounding_boxes:
-        # Get the distance in (m)
 
-        # dimx, dimy
-        # distance_median = np.median(depth_array[box.xmin+5:box.xmax-5, box.ymin+5:box.ymax-5])#/1000 # (m)
-        # debug+="\n    distance_median: "+str(distance_median)+"(m)"
+        # Get the distance in (m) and coordinates in pixel
+        # distance, x, y = getDistanceAvg(depth_array, box)
+        # distance, x, y = getDistanceMedian(depth_array, box)
+        distance, x, y = getDistanceMode(depth_array, box)
+        # distance, x, y = getDistanceGrabcut(depth_image, box)
 
-
-        mask = np.zeros(depth_image.shape[:2],np.uint8)
-        bgdModel = np.zeros((1,65),np.float64)
-        fgdModel = np.zeros((1,65),np.float64)
-
-        rect = (50,50,450,290)
-        cv2.grabCut(depth_image,mask,rect,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_RECT)
-
-        mask2 = np.where((mask==2)|(mask==0),0,1).astype('uint8')
-        depth_image = depth_image*mask2[:,:,np.newaxis]
-
-        plt.imshow(depth_image),plt.colorbar(),plt.show()
-
-
-
-
-
-
+        if display_gui:
+            plt.scatter(x, y, c='r', s=10)
+            plt.text(x, y-2, "{:.2f}m".format(distance), fontsize=9)
 
 
         # Create the 3D box
@@ -103,27 +156,23 @@ def synchronisedCallback(depth, bounding_boxes):
         box3D.pose.orientation.z = quat[2]
         box3D.pose.orientation.w = quat[3]
 
-        # Get 2d center
-        x = (box.xmax + box.xmin)/2
-        y = (box.ymax + box.ymin)/2
-
         # Get pixel to rad ratio
         xratio = camera_fov_width/depth_array.shape[1]
         yratio = camera_fov_height/depth_array.shape[0]
 
         # Get the IRL angles from the camera center to the object
-        ax = -(x - depth_array.shape[1]/2)*xratio
+        ax = (x - depth_array.shape[1]/2)*xratio
         ay = -(y - depth_array.shape[0]/2)*yratio
-        aw = -(box.xmax - depth_array.shape[1]/2)*xratio
-        ah = -(box.ymax - depth_array.shape[0]/2)*yratio
+        aw = -(box.ymax - depth_array.shape[1]/2)*xratio
+        ah = -(box.xmax - depth_array.shape[0]/2)*yratio
 
         # Convert the angeles and distance to x y z coordinates
-        px = -distance_median * math.sin(ax)
-        py = -distance_median * math.sin(ay)
-        pz = distance_median * math.cos(ax)*math.cos(ay)
-        pxwh = -distance_median * math.sin(aw)
-        pywh = -distance_median * math.sin(ah)
-        pzwh = distance_median * math.cos(aw)*math.cos(ah)
+        px = -distance * math.sin(ax)
+        py = -distance * math.sin(ay)
+        pz = distance * math.cos(ax)*math.cos(ay)
+        pxwh = -distance * math.sin(aw)
+        pywh = -distance * math.sin(ah)
+        pzwh = distance * math.cos(aw)*math.cos(ah)
 
         # Place the coordinates into the pose.
         box3D.pose.position.x = float(-px)
@@ -142,6 +191,9 @@ def synchronisedCallback(depth, bounding_boxes):
 
         i += 1
 
+
+    if display_gui:
+        plt.show()
 
     rospy.logdebug(debug)
     boxPublisher.publish(boxes3D)
