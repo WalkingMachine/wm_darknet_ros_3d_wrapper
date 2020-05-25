@@ -1,6 +1,27 @@
 <launch>
 
+    <arg name="depth_topic" default="/head_xtion/depth/image_raw" />
+    <arg name="bounding_boxes_topic" default="/darknet_ros/bounding_boxes" />
+    <arg name="synchroniser_buffer" default="60.0" />
+    <arg name="synchroniser_time_tolerance" default="5.5" />
+    <arg name="camera_fov_width" default="1.012290966" />
+    <arg name="camera_fov_height" default="0.785398163397" />
+    <arg name="histogramPrecision" default="15.0" />
+    <arg name="display_gui" default="False" />
+
+    <!--Launch the time stamp correction node -->
     <node pkg="wm_darknet_ros_3d_wrapper" type="bounding_box_stamp_corrector.py" name="bounding_box_stamp_corrector"/>
-    <node pkg="wm_darknet_ros_3d_wrapper" type="wm_darknet_ros_3d_wrapper_node.py" name="wm_darknet_ros_3d_wrapper_node" output="screen"/>
+
+    <!-- Launch the darknet box 3D converter node -->
+    <node pkg="wm_darknet_ros_3d_wrapper" type="wm_darknet_ros_3d_wrapper_node.py" name="wm_darknet_ros_3d_wrapper_node" output="screen">
+        <param name="depth_topic" value="$(arg depth_topic)" />
+        <param name="bounding_boxes_topic" value="$(arg bounding_boxes_topic)" />
+        <param name="synchroniser_buffer" value="$(arg synchroniser_buffer)" />
+        <param name="synchroniser_time_tolerance" value="$(arg synchroniser_time_tolerance)" />
+        <param name="camera_fov_width" value="$(arg camera_fov_width)" />
+        <param name="camera_fov_height" value="$(arg camera_fov_height)" />
+        <param name="histogramPrecision" value="$(arg histogramPrecision)" />
+        <param name="display_gui" value="$(arg display_gui)" />
+    </node>
 
 </launch>

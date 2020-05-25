@@ -26,7 +26,7 @@ camera_fov_width = ""
 camera_fov_height = ""
 markerPublisher = ""
 boxPublisher = ""
-histogramPrecision = 15.0 # (bins/m) 15 bins result in 6.7cm per bins
+histogramPrecision = 15 # (bins/m) 15 bins result in 6.7cm per bins
 display_gui = False
 
 
@@ -84,7 +84,7 @@ def getDistanceMode(depth_array, box):
 
 
 def synchronisedCallback(depth, bounding_boxes):
-    rospy.loginfo("begin")
+    # rospy.loginfo("begin")
     global depth_topic
     global bounding_boxes_topic
     global synchroniser_buffer
@@ -121,7 +121,7 @@ def synchronisedCallback(depth, bounding_boxes):
     for box in bounding_boxes.bounding_boxes:
 
         # Get the distance in (m) and coordinates in pixel
-        # distance, x, y = getDistanceAvg(depth_array, box)
+        #distance, x, y = getDistanceAvg(depth_array, box)
         # distance, x, y = getDistanceMedian(depth_array, box)
         distance, x, y = getDistanceMode(depth_array, box)
         # distance, x, y = getDistanceGrabcut(depth_image, box)
@@ -198,7 +198,7 @@ def synchronisedCallback(depth, bounding_boxes):
     rospy.logdebug(debug)
     boxPublisher.publish(boxes3D)
     markerPublisher.publish(markers)
-    rospy.loginfo("end")
+    # rospy.loginfo("end")
 
 
 def wm_darknet_ros_3d_wrapper_node():
@@ -212,20 +212,28 @@ def wm_darknet_ros_3d_wrapper_node():
     global camera_fov_height
     global markerPublisher
     global boxPublisher
+    global histogramPrecision
+    global display_gui
 
 
     # Get parameters
-    depth_topic = rospy.get_param("depth_topic", "/head_xtion/depth/image_raw")
-    bounding_boxes_topic = rospy.get_param("bounding_boxes_topic", "/darknet_ros/bounding_boxes")
-    synchroniser_buffer = rospy.get_param("synchroniser_buffer", 60)
-    synchroniser_time_tolerance = rospy.get_param("synchroniser_time_tolerance", 5.5)
-    camera_fov_width = rospy.get_param("camera_fov_width", 1.012290966)
-    camera_fov_height = rospy.get_param("camera_fov_height", 0.785398163397)
+    depth_topic = rospy.get_param("~depth_topic", "/head_xtion/depth/image_raw")
+    bounding_boxes_topic = rospy.get_param("~bounding_boxes_topic", "/darknet_ros/bounding_boxes")
+    synchroniser_buffer = rospy.get_param("~synchroniser_buffer", 60.0)
+    synchroniser_time_tolerance = rospy.get_param("~synchroniser_time_tolerance", 5.5)
+    camera_fov_width = rospy.get_param("~camera_fov_width", 1.012290966)
+    camera_fov_height = rospy.get_param("~camera_fov_height", 0.785398163397)
+    histogramPrecision = rospy.get_param("~histogramPrecision", 15.0)
+    display_gui = rospy.get_param("~display_gui", False)
 
     rospy.loginfo("wm_darknet_ros_3d_wrapper_node settings:\n    depth_topic: "+str(depth_topic)
     +"\n    bounding_boxes_topic: "+str(bounding_boxes_topic)
     +"\n    synchroniser_buffer: "+str(synchroniser_buffer)
-    +"\n    synchroniser_time_tolerance: "+str(synchroniser_time_tolerance))
+    +"\n    synchroniser_time_tolerance: "+str(synchroniser_time_tolerance)
+    +"\n    camera_fov_width: "+str(camera_fov_width)
+    +"\n    camera_fov_height: "+str(camera_fov_height)
+    +"\n    histogramPrecision: "+str(histogramPrecision)
+    +"\n    display_gui: "+str(display_gui))
 
     # Create depth and bounding boxes subscribers.
     depth_sub = Subscriber(depth_topic, Image)
