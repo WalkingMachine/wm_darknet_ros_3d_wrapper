@@ -117,6 +117,7 @@ def synchronisedCallback(depth, bounding_boxes):
         box3D = BoundingBox3D()
         box3D.className = box.Class
         box3D.probability = box.probability
+        box3D.id = box.id
 
         # Create the marker
         marker = Marker()
