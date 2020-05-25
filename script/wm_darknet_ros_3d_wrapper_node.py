@@ -12,8 +12,6 @@ from tf.transformations import quaternion_from_euler
 import math
 from visualization_msgs.msg import MarkerArray, Marker
 from matplotlib import pyplot as plt
-from scipy import stats
-import sys
 from  scipy import ndimage
 
 bridge = CvBridge()
@@ -46,7 +44,6 @@ def getDistanceMode(depth_array, box):
     try:
         bincount = np.bincount((data*histogramPrecision).astype(int))
     except:
-        # np.set_printoptions(threshold=sys.maxsize)
         print("errored data")
         print(data)
 
