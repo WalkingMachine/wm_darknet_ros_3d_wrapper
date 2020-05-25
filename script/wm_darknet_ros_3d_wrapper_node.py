@@ -14,8 +14,8 @@ from visualization_msgs.msg import MarkerArray, Marker
 from matplotlib import pyplot as plt
 from  scipy import ndimage
 
-bridge = CvBridge()
 
+# Declare the global variables
 depth_topic = ""
 bounding_boxes_topic = ""
 synchroniser_buffer = ""
@@ -26,9 +26,12 @@ markerPublisher = ""
 boxPublisher = ""
 histogramPrecision = 15 # (bins/m) 15 bins result in 6.7cm per bins
 display_gui = False
+bridge = CvBridge()
+
 
 # Get the distance in (m) and coordinates in pixel. Using Median.
 def getDistanceMode(depth_array, box):
+    # Get the global variables
     global histogramPrecision
     global display_gui
 
@@ -66,13 +69,14 @@ def getDistanceMode(depth_array, box):
 
 
 def synchronisedCallback(depth, bounding_boxes):
-    # rospy.loginfo("begin")
+    # Get the global variables
     global depth_topic
     global bounding_boxes_topic
     global synchroniser_buffer
     global synchroniser_time_tolerance
     global camera_fov_width
     global camera_fov_height
+    global bridge
 
 
     debug="I heard something"
@@ -99,16 +103,15 @@ def synchronisedCallback(depth, bounding_boxes):
         plt.imshow(depth_array)
         plt.colorbar()
 
-    i = 0
     for box in bounding_boxes.bounding_boxes:
 
         # Get the distance in (m) and coordinates in pixel
         distance, x, y = getDistanceMode(depth_array, box)
 
+        # Display the gui if needed
         if display_gui:
             plt.scatter(x, y, c='r', s=10)
             plt.text(x, y-2, "{:.2f}m".format(distance), fontsize=9)
-
 
         # Create the 3D box
         box3D = BoundingBox3D()
@@ -119,13 +122,12 @@ def synchronisedCallback(depth, bounding_boxes):
         marker = Marker()
         marker.header = bounding_boxes.header
         marker.ns = "bounding_box_3d"
-        marker.id = i
+        marker.id = box.id
         marker.type = marker.CUBE
         marker.color.r = 1
         marker.color.g = 1
         marker.color.b = 1
         marker.color.a = 0.8
-        # marker.lifetime = rospy.Time(2)
         marker.frame_locked = True
 
         # Set the orientation
@@ -168,7 +170,6 @@ def synchronisedCallback(depth, bounding_boxes):
         boxes3D.boundingBoxes.append(box3D)
         markers.markers.append(marker)
 
-        i += 1
 
 
     if display_gui:
@@ -177,12 +178,12 @@ def synchronisedCallback(depth, bounding_boxes):
     rospy.logdebug(debug)
     boxPublisher.publish(boxes3D)
     markerPublisher.publish(markers)
-    # rospy.loginfo("end")
-
 
 def wm_darknet_ros_3d_wrapper_node():
+    # Initiate the ros node
     rospy.init_node('darknet_ros_3d_wrapper_node')
 
+    # Get the global variables
     global depth_topic
     global bounding_boxes_topic
     global synchroniser_buffer
@@ -222,8 +223,8 @@ def wm_darknet_ros_3d_wrapper_node():
     ts.registerCallback(synchronisedCallback)
 
     # Create the publishers
-    boxPublisher = rospy.Publisher('~/boxes3d', BoundingBoxes3D, queue_size=10)
-    markerPublisher = rospy.Publisher('~/boxes3d_markers', MarkerArray, queue_size=10)
+    boxPublisher = rospy.Publisher('~boxes3d', BoundingBoxes3D, queue_size=10)
+    markerPublisher = rospy.Publisher('~boxes3d_markers', MarkerArray, queue_size=10)
 
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()
