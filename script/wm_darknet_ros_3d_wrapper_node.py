@@ -29,21 +29,6 @@ boxPublisher = ""
 histogramPrecision = 15 # (bins/m) 15 bins result in 6.7cm per bins
 display_gui = False
 
-
-# Get the distance in (m) and coordinates in pixel. Using Median.
-def getDistanceMedian(depth_array, box):
-    distance_median = np.median(depth_array[box.ymin+5:box.ymax-5, box.xmin+5:box.xmax-5])#/1000 # (m)
-    x = (box.ymin+box.ymax)/2
-    y = (box.xmin+box.xmax)/2
-    return distance_median, x, y
-
-# Get the distance in (m) and coordinates in pixel. Using Median.
-def getDistanceAvg(depth_array, box):
-    distance_avg = np.mean(depth_array[box.ymin+5:box.ymax-5, box.xmin+5:box.xmax-5])#/1000 # (m)
-    x = (box.ymin+box.ymax)/2
-    y = (box.xmin+box.xmax)/2
-    return distance_avg, x, y
-
 # Get the distance in (m) and coordinates in pixel. Using Median.
 def getDistanceMode(depth_array, box):
     global histogramPrecision
@@ -121,10 +106,7 @@ def synchronisedCallback(depth, bounding_boxes):
     for box in bounding_boxes.bounding_boxes:
 
         # Get the distance in (m) and coordinates in pixel
-        #distance, x, y = getDistanceAvg(depth_array, box)
-        # distance, x, y = getDistanceMedian(depth_array, box)
         distance, x, y = getDistanceMode(depth_array, box)
-        # distance, x, y = getDistanceGrabcut(depth_image, box)
 
         if display_gui:
             plt.scatter(x, y, c='r', s=10)
